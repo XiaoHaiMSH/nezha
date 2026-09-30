@@ -48,7 +48,7 @@ return view.extend({
 	load: function () {
 		return Promise.all([
 			isRunning(),
-			L.resolveDefault(fs.exec_direct('/sbin/logread', [ '-e', 'nezha-dashboard' ]), ''),
+			L.resolveDefault(fs.exec_direct('/sbin/logread', [ '-e', '[Nn][Ee][Zz][Hh][Aa]' ]), ''),
 			uci.load('nezha-dashboard')
 		]);
 	},
@@ -58,11 +58,7 @@ return view.extend({
 		var logs = (data[1] || '').trim().split('\n').slice(-100).join('\n');
 		var m, s, o;
 
-		m = new form.Map('nezha-dashboard', _('Nezha Dashboard'),
-			_('Dashboard (server side) of Nezha Monitoring V2. Add servers with the install command ' +
-			  'generated on its "Servers" page. Default login is <code>admin</code> / <code>admin</code>, ' +
-			  'change it immediately. ') +
-			'<a href="https://nezha.wiki/guide/dashboard.html" target="_blank" rel="noreferrer">nezha.wiki</a>');
+		m = new form.Map('nezha-dashboard', _('Nezha Dashboard'));
 
 		s = m.section(form.NamedSection, 'main', 'nezha_dashboard');
 		s.addremove = false;
@@ -74,27 +70,21 @@ return view.extend({
 		o = s.taboption('general', form.Flag, 'enabled', _('Enable'));
 		o.rmempty = false;
 
-		o = s.taboption('general', form.Value, 'listen_port', _('Listen port'),
-			_('Web panel and Agent connections share this single port.'));
+		o = s.taboption('general', form.Value, 'listen_port', _('Listen port'));
 		o.datatype = 'port';
 		o.default = '8008';
 		o.rmempty = false;
 
-		o = s.taboption('general', form.Value, 'listen_host', _('Listen address'),
-			_('Leave empty to listen on all interfaces.'));
+		o = s.taboption('general', form.Value, 'listen_host', _('Listen address'));
 		o.datatype = 'ipaddr';
 		o.placeholder = '0.0.0.0';
 		o.optional = true;
 
-		o = s.taboption('general', form.Flag, 'open_wan', _('Allow access from WAN'),
-			_('Add a firewall rule that opens the listen port on the WAN zone, ' +
-			  'so servers on the Internet can connect. Requires a public IP on this router.'));
+		o = s.taboption('general', form.Flag, 'open_wan', _('Allow access from WAN'));
 		o.default = o.disabled;
+		o.rmempty = false;
 
-		o = s.taboption('general', form.Value, 'install_host', _('Agent connect address'),
-			_('Address that Agents use to reach this Dashboard, format <code>host:port</code>, e.g. ' +
-			  '<code>ddns.example.com:8008</code>. Used in the generated install command. ' +
-			  'Do not put this domain behind a CDN.'));
+		o = s.taboption('general', form.Value, 'install_host', _('Agent connect address'));
 		o.placeholder = 'ddns.example.com:8008';
 		o.optional = true;
 		o.validate = function (section_id, value) {
@@ -104,11 +94,14 @@ return view.extend({
 			return true;
 		};
 
-		o = s.taboption('general', form.Value, 'data_dir', _('Data directory'),
-			_('Holds <code>data/config.yaml</code> and the SQLite database. It is written to often, ' +
-			  'so prefer external storage (USB / disk) over the router flash.'));
-		o.default = '/opt/nezha-dashboard';
+		o = s.taboption('general', form.Value, 'data_dir', _('Data directory'));
+		o.default = '/etc/nezha-dashboard';
 		o.rmempty = false;
+		o.validate = function (section_id, value) {
+			if (!/^\/[A-Za-z0-9._\/-]+$/.test(value) || value.indexOf('..') >= 0)
+				return _('Expecting: absolute path without spaces or quotes');
+			return true;
+		};
 
 		o = s.taboption('general', form.Value, 'location', _('Time zone'));
 		o.value('Asia/Shanghai');
@@ -117,6 +110,11 @@ return view.extend({
 		o.value('UTC');
 		o.default = 'Asia/Shanghai';
 		o.optional = true;
+		o.validate = function (section_id, value) {
+			if (value && !/^[A-Za-z0-9_+\/-]+$/.test(value))
+				return _('Expecting: time zone name, e.g. Asia/Shanghai');
+			return true;
+		};
 
 		o = s.taboption('general', form.Value, 'language', _('Language'));
 		o.value('zh_CN', '简体中文');
@@ -125,6 +123,11 @@ return view.extend({
 		o.value('ja_JP', '日本語');
 		o.default = 'zh_CN';
 		o.optional = true;
+		o.validate = function (section_id, value) {
+			if (value && !/^[a-z]{2,3}(_[A-Za-z]{2,4})?$/.test(value))
+				return _('Expecting: locale code, e.g. zh_CN');
+			return true;
+		};
 
 		o = s.taboption('log', form.DummyValue, '_log');
 		o.rawhtml = true;
