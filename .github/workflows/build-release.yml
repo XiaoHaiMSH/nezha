@@ -47,7 +47,6 @@ jobs:
             sdk_prefix: immortalwrt-sdk-qualcommax-ipq60xx_
             target: qualcommax
             subtarget: ipq60xx
-            replace_golang: false
           - platform_name: AMD64
             pkg_format: apk
             arch_suffix: x86_64
@@ -56,7 +55,6 @@ jobs:
             sdk_prefix: immortalwrt-sdk-x86-64_
             target: x86
             subtarget: '64'
-            replace_golang: false
           - platform_name: ARM64
             pkg_format: ipk
             arch_suffix: arm64
@@ -65,7 +63,6 @@ jobs:
             sdk_prefix: immortalwrt-sdk-24.10.6-qualcommax-ipq807x_gcc-13.3.0_
             target: qualcommax
             subtarget: ipq807x
-            replace_golang: true
           - platform_name: AMD64
             pkg_format: ipk
             arch_suffix: x86_64
@@ -74,7 +71,6 @@ jobs:
             sdk_prefix: immortalwrt-sdk-24.10.6-x86-64_gcc-13.3.0_
             target: x86
             subtarget: '64'
-            replace_golang: true
 
     env:
       SDK_BASE_URL: https://downloads.immortalwrt.org/${{ matrix.sdk_base }}/targets/${{ matrix.sdk_path }}
@@ -91,12 +87,6 @@ jobs:
             build-essential clang flex bison g++ gawk gettext git \
             libelf-dev libncurses-dev libssl-dev python3 python3-setuptools \
             rsync swig time unzip xsltproc zip zlib1g-dev zstd
-
-      - name: Setup Go
-        if: matrix.pkg_format == 'ipk'
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.27.1'
 
       - name: Locate SDK
         id: sdk
@@ -142,20 +132,9 @@ jobs:
           cp -a luci-app-nezha-dashboard "$SDK_ROOT/package/luci-app-nezha-dashboard"
 
       - name: Update and install feeds
-        if: matrix.pkg_format == 'apk'
         run: |
           "$SDK_ROOT/scripts/feeds" update -a
           "$SDK_ROOT/scripts/feeds" install -a
-
-      - name: Replace OpenWrt Golang
-        if: matrix.pkg_format == 'ipk'
-        run: |
-          cd "$SDK_ROOT"
-          ./scripts/feeds update -a
-          ./scripts/feeds install -a
-          rm -rf feeds/packages/lang/golang
-          git clone --depth=1 -b 26.x https://github.com/sbwml/packages_lang_golang feeds/packages/lang/golang
-          ./scripts/feeds install -f golang
 
       - name: Configure packages
         run: |
@@ -165,9 +144,9 @@ jobs:
           CONFIG_TARGET_MULTI_PROFILE=y
           CONFIG_DEVEL=y
           CONFIG_BUILD_LOG=y
-          $( [[ "${{ matrix.pkg_format }}" == "ipk" ]] && echo "CONFIG_PACKAGE_golang=y" )
           CONFIG_PACKAGE_nezha-dashboard=m
           CONFIG_PACKAGE_luci-app-nezha-dashboard=m
+          CONFIG_PACKAGE_luci-i18n-nezha-dashboard-zh-cn=m
           EOF
 
           make -C "$SDK_ROOT" defconfig
@@ -190,30 +169,44 @@ jobs:
           mkdir -p "$RUNNER_TEMP/output"
           nezha_found=0
           luci_found=0
+          i18n_found=0
 
           if [[ "$PKG_FORMAT" == "apk" ]]; then
             while IFS= read -r -d '' apk; do
               metadata="$("$SDK_ROOT/staging_dir/host/bin/apk" adbdump "$apk")"
               name="$(awk '/^  name: / { sub(/^  name: /, ""); print; exit }' <<< "$metadata")"
 
-              if [[ "$name" == "nezha-dashboard" ]]; then
-                base="$(basename "$apk")"
-                version_part="${base#nezha-dashboard-}"
-                version_part="${version_part%.apk}"
-                cp -p "$apk" "$RUNNER_TEMP/output/nezha-dashboard_${ARCH_SUFFIX}-${version_part}.apk"
-                nezha_found=$((nezha_found + 1))
-              elif [[ "$name" == "luci-app-nezha-dashboard" ]]; then
-                base="$(basename "$apk")"
-                version_part="${base#luci-app-nezha-dashboard-}"
-                version_part="${version_part%.apk}"
-                cp -p "$apk" "$RUNNER_TEMP/output/luci-app-nezha-dashboard-${version_part}.apk"
-                luci_found=$((luci_found + 1))
-              fi
+              case "$name" in
+                nezha-dashboard)
+                  base="$(basename "$apk")"
+                  version_part="${base#nezha-dashboard-}"
+                  version_part="${version_part%.apk}"
+                  cp -p "$apk" "$RUNNER_TEMP/output/nezha-dashboard_${ARCH_SUFFIX}-${version_part}.apk"
+                  nezha_found=$((nezha_found + 1))
+                  ;;
+                luci-app-nezha-dashboard)
+                  base="$(basename "$apk")"
+                  version_part="${base#luci-app-nezha-dashboard-}"
+                  version_part="${version_part%.apk}"
+                  cp -p "$apk" "$RUNNER_TEMP/output/luci-app-nezha-dashboard-${version_part}.apk"
+                  luci_found=$((luci_found + 1))
+                  ;;
+                luci-i18n-nezha-dashboard-zh-cn)
+                  base="$(basename "$apk")"
+                  version_part="${base#luci-i18n-nezha-dashboard-zh-cn-}"
+                  version_part="${version_part%.apk}"
+                  cp -p "$apk" "$RUNNER_TEMP/output/luci-i18n-nezha-dashboard-zh-cn-${version_part}.apk"
+                  i18n_found=$((i18n_found + 1))
+                  ;;
+              esac
             done < <(find "$SDK_ROOT/bin" -type f \
-              \( -name 'nezha-dashboard-*.apk' -o -name 'luci-app-nezha-dashboard-*.apk' \) -print0)
+              \( -name 'nezha-dashboard-*.apk' \
+                 -o -name 'luci-app-nezha-dashboard-*.apk' \
+                 -o -name 'luci-i18n-nezha-dashboard-zh-cn-*.apk' \) -print0)
 
             [[ "$nezha_found" -eq 1 ]]
             [[ "$luci_found" -ge 1 ]]
+            [[ "$i18n_found" -ge 1 ]]
           else
             while IFS= read -r -d '' ipk; do
               control_dir="$(mktemp -d)"
@@ -229,24 +222,37 @@ jobs:
               name="$(awk -F': ' '/^Package:/ { print $2; exit }' "$control_dir/control" 2>/dev/null)"
               rm -rf "$control_dir"
 
-              if [[ "$name" == "nezha-dashboard" ]]; then
-                base="$(basename "$ipk")"
-                version_part="${base#nezha-dashboard_}"
-                version_part="${version_part%%_*}"
-                cp -p "$ipk" "$RUNNER_TEMP/output/nezha-dashboard_${ARCH_SUFFIX}-${version_part}.ipk"
-                nezha_found=$((nezha_found + 1))
-              elif [[ "$name" == "luci-app-nezha-dashboard" ]]; then
-                base="$(basename "$ipk")"
-                version_part="${base#luci-app-nezha-dashboard_}"
-                version_part="${version_part%%_*}"
-                cp -p "$ipk" "$RUNNER_TEMP/output/luci-app-nezha-dashboard_${version_part}.ipk"
-                luci_found=$((luci_found + 1))
-              fi
+              case "$name" in
+                nezha-dashboard)
+                  base="$(basename "$ipk")"
+                  version_part="${base#nezha-dashboard_}"
+                  version_part="${version_part%%_*}"
+                  cp -p "$ipk" "$RUNNER_TEMP/output/nezha-dashboard_${ARCH_SUFFIX}-${version_part}.ipk"
+                  nezha_found=$((nezha_found + 1))
+                  ;;
+                luci-app-nezha-dashboard)
+                  base="$(basename "$ipk")"
+                  version_part="${base#luci-app-nezha-dashboard_}"
+                  version_part="${version_part%%_*}"
+                  cp -p "$ipk" "$RUNNER_TEMP/output/luci-app-nezha-dashboard_${version_part}.ipk"
+                  luci_found=$((luci_found + 1))
+                  ;;
+                luci-i18n-nezha-dashboard-zh-cn)
+                  base="$(basename "$ipk")"
+                  version_part="${base#luci-i18n-nezha-dashboard-zh-cn_}"
+                  version_part="${version_part%%_*}"
+                  cp -p "$ipk" "$RUNNER_TEMP/output/luci-i18n-nezha-dashboard-zh-cn_${version_part}.ipk"
+                  i18n_found=$((i18n_found + 1))
+                  ;;
+              esac
             done < <(find "$SDK_ROOT/bin" -type f \
-              \( -name 'nezha-dashboard_*.ipk' -o -name 'luci-app-nezha-dashboard_*.ipk' \) -print0)
+              \( -name 'nezha-dashboard_*.ipk' \
+                 -o -name 'luci-app-nezha-dashboard_*.ipk' \
+                 -o -name 'luci-i18n-nezha-dashboard-zh-cn_*.ipk' \) -print0)
 
             [[ "$nezha_found" -ge 1 ]]
             [[ "$luci_found" -ge 1 ]]
+            [[ "$i18n_found" -ge 1 ]]
           fi
 
       - name: Upload packages
