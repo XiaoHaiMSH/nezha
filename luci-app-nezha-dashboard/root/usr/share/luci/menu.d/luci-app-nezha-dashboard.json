@@ -1,0 +1,13 @@
+{
+	"admin/services/nezha-dashboard": {
+		"title": "Nezha Dashboard",
+		"action": {
+			"type": "view",
+			"path": "nezha-dashboard/config"
+		},
+		"depends": {
+			"acl": [ "luci-app-nezha-dashboard" ],
+			"uci": { "nezha-dashboard": true }
+		}
+	}
+}

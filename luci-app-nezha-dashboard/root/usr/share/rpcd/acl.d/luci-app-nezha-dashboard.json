@@ -1,0 +1,17 @@
+{
+	"luci-app-nezha-dashboard": {
+		"description": "Grant access to Nezha Dashboard configuration",
+		"read": {
+			"file": {
+				"/sbin/logread": [ "exec" ]
+			},
+			"ubus": {
+				"service": [ "list" ]
+			},
+			"uci": [ "nezha-dashboard" ]
+		},
+		"write": {
+			"uci": [ "nezha-dashboard" ]
+		}
+	}
+}

@@ -1,0 +1,64 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: zh_Hans\n"
+
+msgid "Nezha Dashboard"
+msgstr "哪吒面板"
+
+msgid "Service status"
+msgstr "服务状态"
+
+msgid "Nezha Dashboard is "
+msgstr "哪吒面板 "
+
+msgid "RUNNING"
+msgstr "运行中"
+
+msgid "NOT RUNNING"
+msgstr "未运行"
+
+msgid "Open Dashboard"
+msgstr "打开面板"
+
+msgid "General Settings"
+msgstr "基本设置"
+
+msgid "Log"
+msgstr "日志"
+
+msgid "Enable"
+msgstr "启用"
+
+msgid "Listen port"
+msgstr "监听端口"
+
+msgid "Web panel and Agent connections share this single port."
+msgstr "网页面板和 Agent 连接共用这一个端口。"
+
+msgid "Listen address"
+msgstr "监听地址"
+
+msgid "Leave empty to listen on all interfaces."
+msgstr "留空表示监听所有接口。"
+
+msgid "Allow access from WAN"
+msgstr "允许从 WAN 访问"
+
+msgid "Agent connect address"
+msgstr "Agent 对接地址"
+
+msgid "Data directory"
+msgstr "数据目录"
+
+msgid "Time zone"
+msgstr "时区"
+
+msgid "Language"
+msgstr "语言"
+
+msgid "No log entries."
+msgstr "暂无日志。"
+
+msgid "Expecting: host:port"
+msgstr "格式应为 host:port"
