@@ -3,7 +3,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=nezha-dashboard
-PKG_VERSION:=2.3.0
+PKG_VERSION:=2.3.14
 PKG_RELEASE:=1
 
 ifeq ($(ARCH),x86_64)
