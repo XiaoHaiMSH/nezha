@@ -1,10 +1,4 @@
 # SPDX-License-Identifier: Apache-2.0
-#
-# OpenWrt package for Nezha Monitoring V2 Dashboard (https://github.com/nezhahq/nezha)
-#
-# The upstream dashboard needs CGO (sqlite) and its web frontends are fetched
-# at upstream CI time, so this package installs the official prebuilt static
-# release binary (frontends are embedded). Only amd64 / arm64 are published.
 
 include $(TOPDIR)/rules.mk
 
@@ -21,7 +15,6 @@ endif
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-$(NEZHA_ARCH).zip
 PKG_SOURCE_URL:=https://github.com/nezhahq/nezha/releases/download/v$(PKG_VERSION)/
 PKG_SOURCE_URL_FILE:=dashboard-linux-$(NEZHA_ARCH).zip
-# Replace with real hashes (one per arch): make package/nezha-dashboard/download V=s
 PKG_HASH:=skip
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
 
