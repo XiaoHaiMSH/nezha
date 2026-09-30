@@ -42,12 +42,12 @@ endef
 define Package/nezha-dashboard/description
   Dashboard (server side) of Nezha Monitoring V2. Serves the web panel and
   accepts Agent connections on a single port (default 8008).
-  Needs ~100MB+ free RAM and a writable data directory (SQLite); put the
-  data directory on external storage to spare the flash.
+  Needs ~100MB+ free RAM and a writable data directory (SQLite).
 endef
 
 define Package/nezha-dashboard/conffiles
 /etc/config/nezha-dashboard
+/etc/nezha-dashboard/
 endef
 
 define Build/Prepare
