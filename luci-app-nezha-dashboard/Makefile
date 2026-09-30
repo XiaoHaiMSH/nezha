@@ -3,11 +3,11 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-nezha-dashboard
-PKG_VERSION:=1.0.0
+PKG_VERSION:=2.3.0
 PKG_RELEASE:=1
-
+PKG_PO_VERSION:=$(PKG_VERSION)-r$(PKG_RELEASE)
 PKG_LICENSE:=Apache-2.0
-PKG_MAINTAINER:=Your Name <you@example.com>
+PKG_MAINTAINER:=xiaohaisly
 
 LUCI_TITLE:=LuCI support for Nezha Dashboard
 LUCI_DESCRIPTION:=LuCI configuration page for Nezha Monitoring V2 Dashboard
